@@ -115,7 +115,7 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
         while current_displayed_percent < pre_target:
             current_displayed_percent += 1
             progress_bar.progress(current_displayed_percent / 100)
-            status_text.markdown(f"<div class='status-msg'>🌱 단어 아카이브 분석 중... {current_displayed_percent}% (`{file.name}` 판독 중)</div>", unsafe_allow_html=True)
+            status_text.info(f"🌱 단어 아카이브 분석 중... {current_displayed_percent}% (`{file.name}` 판독 중)")
             time.sleep(0.01)
             
         page_data = None
@@ -140,7 +140,7 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
                 
             except Exception as e:
                 if attempt < max_retries - 1:
-                    status_text.markdown(f"<div class='status-msg' style='color:#cca01a;'>⚠️ 안정한 연결을 위해 재시도 중입니다... ({attempt + 1}/{max_retries})</div>", unsafe_allow_html=True)
+                    status_text.warning(f"⚠️ 안정적인 연결을 위해 재시도 중입니다... ({attempt + 1}/{max_retries})")
                     time.sleep(2.0)
                 else:
                     st.error(f"🛑 구글 서버 과부하가 지속되어 `{file.name}` 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.")
@@ -148,170 +148,70 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
         while current_displayed_percent < target_percent:
             current_displayed_percent += 1
             progress_bar.progress(current_displayed_percent / 100)
-            status_text.markdown(f"<div class='status-msg'>✨ 단어 아카이브 분석 중... {current_displayed_percent}% (`{file.name}` 정제 완료)</div>", unsafe_allow_html=True)
+            status_text.info(f"✨ 단어 아카이브 분석 중... {current_displayed_percent}% (`{file.name}` 정제 완료)")
             time.sleep(0.01)
             
         time.sleep(0.2)
         
     progress_bar.progress(1.0)
-    status_text.markdown("<div class='status-msg' style='color:#2e7d32; font-weight:bold;'>🌿 정제 프로세스가 완료되었습니다. (100%)</div>", unsafe_allow_html=True)
+    status_text.success("🌿 정제 프로세스가 성공적으로 완료되었습니다. (100%)")
     return all_data
 
 # ==========================================
 # 3. Streamlit 메인 UI 대시보드
 # ==========================================
-st.set_page_config(page_title="Voca-converter", layout="wide", page_icon="📝")
+st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
 
-# 🔥 [치트키] 캐시를 무시하고 웹 화면 전체를 강제로 지배하는 초고도 CSS 주입
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+# 🏛️ 대형 교육 브랜드 대시보드 무드로 레이아웃 대개편
+with st.container(border=True):
+    # 단정하고 깊이감 있는 세로 구분선과 제목 구성
+    st.markdown("### 📝 Voca-converter")
+    st.caption("MADE BY MANJU · 스마트 교재 연구 솔루션")
+    st.divider() # 감성적인 실선 분리
     
-    /* 1. 텅 빈 좌우 여백을 채우기 위해 기본 앱 래퍼 크기 강제 확장 */
-    [data-testid="stAppViewContainer"] {
-        background-color: #ECEFF1 !important; /* 부드러운 오피스 모노톤 그레이 */
-        font-family: 'Noto Sans KR', 'Inter', sans-serif !important;
-    }
+    # 깔끔하게 차별화된 원장님 연구실 알림창 무드
+    st.help("교재나 유인물 사진을 업로드하시면, 수업 및 인쇄에 즉시 활용할 수 있는 단정하고 정돈된 **표 형태의 워드 문서(.docx)**로 통합 변환해 드립니다.")
     
-    /* 2. 상단 지저분한 여백과 기본 흰색 바 강제 삭제 및 중앙 카드화 */
-    [data-testid="stMainBlockContainer"] {
-        background-color: #FFFFFF !important;
-        max-width: 850px !important;
-        margin: 60px auto !important;
-        padding: 60px 60px !important;
-        border-radius: 24px !important;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05) !important;
-    }
-    
-    /* 3. 상단 헤더 박스 라인 처리 (학원 교재 연구실 무드) */
-    .header-box {
-        text-align: center !important;
-        border-bottom: 2px solid #F1F5F9 !important;
-        padding-bottom: 30px !important;
-        margin-bottom: 40px !important;
-    }
-    .main-title {
-        font-family: 'Inter', sans-serif !important;
-        font-size: 40px !important;
-        font-weight: 600 !important;
-        color: #0F172A !important;
-        letter-spacing: -1.5px !important;
-    }
-    .sub-title {
-        font-family: 'Inter', sans-serif !important;
-        font-size: 11px !important;
-        color: #94A3B8 !important;
-        font-weight: 600 !important;
-        letter-spacing: 3px !important;
-        margin-top: 8px !important;
-    }
-    
-    /* 4. 세련된 라운드 설명 블록 */
-    .description-text {
-        font-size: 14.5px !important;
-        color: #475569 !important;
-        line-height: 1.7 !important;
-        margin-bottom: 40px !important;
-        background-color: #F8FAFC !important;
-        padding: 22px 30px !important;
-        border-radius: 14px !important;
-        border: 1px solid #E2E8F0 !important;
-        text-align: center !important;
-    }
-    
-    /* 5. 투박한 업로드 점선 상자를 완전히 심플하고 감성적인 영역으로 재구축 */
-    [data-testid="stFileUploader"] {
-        border: 2px dashed #CBD5E1 !important;
-        background-color: #FAFAFA !important;
-        border-radius: 16px !important;
-        padding: 30px 20px !important;
-    }
-    
-    /* 6. 투박한 기본 버튼 스타일을 지우고 30대 원장 취향의 매트 블랙으로 고도화 */
-    .stButton>button {
-        background-color: #1E293B !important;
-        color: white !important;
-        border-radius: 10px !important;
-        padding: 15px 20px !important;
-        font-size: 16px !important;
-        font-weight: 500 !important;
-        border: none !important;
-        box-shadow: 0 4px 12px rgba(30, 41, 59, 0.15) !important;
-        width: 100% !important;
-        margin-top: 25px !important;
-    }
-    .stButton>button:hover {
-        background-color: #0F172A !important;
-        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.2) !important;
-    }
-    
-    /* 7. 청록색 감성의 다운로드 버튼 */
-    [data-testid="stDownloadButton"]>button {
-        background-color: #0D9488 !important;
-        color: white !important;
-        border-radius: 10px !important;
-        padding: 15px 20px !important;
-        font-size: 16px !important;
-        font-weight: 500 !important;
-        border: none !important;
-    }
-    
-    /* 진행률 바 */
-    .status-msg {
-        font-size: 14px !important;
-        color: #475569 !important;
-        margin-top: 25px !important;
-    }
-    .stProgress > div > div > div > div {
-        background-color: #475569 !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
+    st.write("") # 자연스러운 여백 추가
 
-# 🏷️ 상단 감성 헤더 디자인 컴포넌트
-st.markdown("""
-    <div class='header-box'>
-        <div class='main-title'>Voca-converter</div>
-        <div class='sub-title'>MADE BY MANJU</div>
-    </div>
-""", unsafe_allow_html=True)
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+    else:
+        st.error("❌ Streamlit Cloud 설정의 Secrets에 GEMINI_API_KEY가 등록되지 않았습니다.")
+        st.stop()
 
-st.markdown("<div class='description-text'>교재나 유인물 사진을 업로드하시면, 수업에 즉시 활용할 수 있는 단정하고 정돈된 <strong>표 형태의 워드 문서(.docx)</strong>로 통합 변환해 드립니다.</div>", unsafe_allow_html=True)
+    uploaded_files = st.file_uploader(
+        "교재 및 단어장 사진 파일을 선택하세요 (여러 장 동시 선택 가능)", 
+        type=["jpg", "jpeg", "png"], 
+        accept_multiple_files=True
+    )
 
-if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
-else:
-    st.error("❌ Streamlit Cloud 설정의 Secrets에 GEMINI_API_KEY가 등록되지 않았습니다.")
-    st.stop()
-
-uploaded_files = st.file_uploader(
-    "교재 및 단어장 사진 파일을 선택하세요 (여러 장 동시 선택 가능)", 
-    type=["jpg", "jpeg", "png"], 
-    accept_multiple_files=True
-)
-
-if uploaded_files:
-    st.markdown(f"<div style='font-size:13.5px; color:#64748B; margin-bottom:15px; text-align:center;'>📂 <strong>선택된 아카이브:</strong> 총 {len(uploaded_files)}개의 문서 파일이 대기 중입니다.</div>", unsafe_allow_html=True)
-    
-    if st.button("✨ 업로드된 문서 분석 및 Word 파일 생성"):
-        client = genai.Client(api_key=api_key)
+    if uploaded_files:
+        st.write("")
+        st.markdown(f"📂 **선택된 아카이브:** 총 `{len(uploaded_files)}개`인쇄 문서 대기 중")
         
-        status_text = st.empty()
-        progress_bar = st.progress(0)
-        
-        all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
-        
-        if all_word_data:
-            st.success("🎉 모든 단어 데이터 정제가 성공적으로 완료되었습니다!")
-            st.write("### 🔍 데이터 통합 미리보기")
-            st.dataframe(all_word_data, use_container_width=True)
+        # 버튼을 강조하여 시각적 투박함 제거
+        if st.button("✨ 업로드된 문서 분석 및 Word 파일 생성", type="primary"):
+            client = genai.Client(api_key=api_key)
             
-            word_file_buffer = create_word_document(all_word_data)
+            status_text = st.empty()
+            progress_bar = st.progress(0)
             
-            st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
-            st.download_button(
-                label="📥 정제된 수업용 Word 문서 다운로드 (.docx)",
-                data=word_file_buffer,
-                file_name="🔮_통합_영어단어장.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+            all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
+            
+            if all_word_data:
+                st.toast("단어 데이터 정제가 완료되었습니다!")
+                st.write("---")
+                st.write("### 🔍 데이터 통합 미리보기")
+                st.dataframe(all_word_data, use_container_width=True)
+                
+                word_file_buffer = create_word_document(all_word_data)
+                
+                st.write("")
+                st.download_button(
+                    label="📥 정제된 수업용 Word 문서 다운로드 (.docx)",
+                    data=word_file_buffer,
+                    file_name="🔮_통합_영어단어장.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True
+                )
