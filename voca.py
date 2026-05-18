@@ -8,7 +8,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import json
 import io
-import asyncio
+import time
 
 # ==========================================
 # 1. 워드 파일 디자인 & 생성 헬퍼 함수
@@ -94,13 +94,12 @@ def create_word_document(all_word_data):
     return buffer
 
 # ==========================================
-# 2. 안전한 비동기 병렬 처리 함수 (에러 방지 핵심)
+# 2. 안정적인 순차 처리 및 부드러운 게이지 함수
 # ==========================================
-async def analyze_single_image(client, file, api_key, delay):
-    """서버 과부하를 막기 위해 아주 짧은 대기 후 API를 호출합니다."""
-    await asyncio.sleep(delay)
-    loop = asyncio.get_event_loop()
-    image_bytes = file.read()
+def process_images_safely(client, uploaded_files, api_key, progress_bar, status_text):
+    """안정적으로 순차 처리하되, 화면 퍼센트는 실시간 애니메이션처럼 부드럽게 올립니다."""
+    all_data = []
+    total_files = len(uploaded_files)
     
     prompt = """
     이 이미지에서 영어 단어, 우리말 뜻, 영영 풀이를 추출해서 정확한 JSON 배열 형식으로 출력해줘.
@@ -111,55 +110,50 @@ async def analyze_single_image(client, file, api_key, delay):
     ]
     """
     
-    def call_api():
-        return client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[
-                types.Part.from_bytes(data=image_bytes, mime_type=file.type),
-                prompt
-            ],
-            config=types.GenerateContentConfig(response_mime_type="application/json")
-        )
+    current_displayed_percent = 0
+    
+    for idx, file in enumerate(uploaded_files):
+        # 목표 퍼센트 계산 (예: 5장 중 1장째 시작할 때 목표는 20%)
+        target_percent = int(((idx + 1) / total_files) * 100)
         
-    response = await loop.run_in_executor(None, call_api)
-    return json.loads(response.text)
-
-async def run_smooth_progress(progress_bar, status_text, stop_event, total_files):
-    current_percent = 0
-    while not stop_event.is_set() and current_percent < 95:
-        if current_percent < 50:
-            current_percent += 1.2
-        elif current_percent < 80:
-            current_percent += 0.6
-        else:
-            current_percent += 0.2
+        # 1. AI 호출 전에 게이지를 목표 지점 근처까지 부드럽게 주르륵 올리기
+        # (예: 0%에서 18%까지 부드럽게 상승 시각 효과)
+        pre_target = target_percent - 3 if target_percent > 3 else 0
+        while current_displayed_percent < pre_target:
+            current_displayed_percent += 1
+            progress_bar.progress(current_displayed_percent / 100)
+            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 처리 중)")
+            time.sleep(0.01)
             
-        display_percent = min(int(current_percent), 95)
-        progress_bar.progress(display_percent / 100)
-        status_text.markdown(f"**⚡ 초고속 비동기 엔진 가동 중... {display_percent}%** (총 {total_files}장의 사진 병렬 분석 중)")
-        await asyncio.sleep(0.05)
-
-async def process_all_images(client, uploaded_files, api_key, progress_bar, status_text):
-    # 각 파일별로 0.3초씩 간격을 두어 구글 서버 트래픽 초과(ServerError)를 원천 차단합니다.
-    tasks = [analyze_single_image(client, file, api_key, idx * 0.3) for idx, file in enumerate(uploaded_files)]
-    
-    stop_event = asyncio.Event()
-    progress_task = asyncio.create_task(
-        run_smooth_progress(progress_bar, status_text, stop_event, len(uploaded_files))
-    )
-    
-    try:
-        results = await asyncio.gather(*tasks)
-    finally:
-        stop_event.set()
-        await progress_task
+        # 2. 실제 안전하게 구글 API 호출 (순차적 호출로 ServerError 완벽 방지)
+        try:
+            image_bytes = file.read()
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[
+                    types.Part.from_bytes(data=image_bytes, mime_type=file.type),
+                    prompt
+                ],
+                config=types.GenerateContentConfig(response_mime_type="application/json")
+            )
+            page_data = json.loads(response.text)
+            all_data.extend(page_data)
+        except Exception as e:
+            st.error(f"`{file.name}` 처리 중 서버 통신 에러 발생: {e}")
+            
+        # 3. 한 장 처리가 완료되면 목표 퍼센트까지 완전히 채우기
+        while current_displayed_percent < target_percent:
+            current_displayed_percent += 1
+            progress_bar.progress(current_displayed_percent / 100)
+            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 완료)")
+            time.sleep(0.01)
+            
+        # 구글 무료 서버 안정을 위해 사진들 사이에 아주 미세한 휴식 시간 추가
+        time.sleep(0.2)
         
+    # 최종 완료 처리
     progress_bar.progress(1.0)
-    status_text.markdown("**🎉 단어 분석 진행률: 100% (완료!)**")
-    
-    all_data = []
-    for page_data in results:
-        all_data.extend(page_data)
+    status_text.markdown("**🎉 단어 분석 진행률: 100% (모든 작업 완료!)**")
     return all_data
 
 # ==========================================
@@ -168,7 +162,7 @@ async def process_all_images(client, uploaded_files, api_key, progress_bar, stat
 st.set_page_config(page_title="Voca 변환기 안정화", layout="centered", page_icon="📝")
 
 st.title("📝 멀티 이미지 단어장 워드 변환기")
-st.write("비동기 병렬 분석 엔진을 도입하여 여러 장의 사진도 눈 깜짝할 새에 하나의 워드 파일로 통합합니다.")
+st.write("안정적인 이미지 분석 엔진을 통해 에러 없이 여러 장의 사진을 하나의 깔끔한 워드 파일로 통합합니다.")
 
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
@@ -185,15 +179,14 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     st.write(f"📂 **선택된 파일 수:** {len(uploaded_files)}개")
     
-    if st.button("🚀 초고속 병렬 분석 및 Word 파일 생성"):
+    if st.button("🚀 안전한 단어 분석 및 Word 파일 생성"):
         client = genai.Client(api_key=api_key)
         
         status_text = st.empty()
         progress_bar = st.progress(0)
         
-        all_word_data = asyncio.run(
-            process_all_images(client, uploaded_files, api_key, progress_bar, status_text)
-        )
+        # 안정화된 순차+애니메이션 함수 실행
+        all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
         
         if all_word_data:
             st.success("🎉 모든 사진의 단어 통합 완료!")
