@@ -162,17 +162,15 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # ==========================================
 st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
 
-# 🏛️ 대형 교육 브랜드 대시보드 무드로 레이아웃 대개편
+# 깔끔한 테두리 상자로 대시보드 구성
 with st.container(border=True):
-    # 단정하고 깊이감 있는 세로 구분선과 제목 구성
     st.markdown("### 📝 Voca-converter")
     st.caption("MADE BY MANJU · 스마트 교재 연구 솔루션")
-    st.divider() # 감성적인 실선 분리
+    st.divider() 
     
-    # 깔끔하게 차별화된 원장님 연구실 알림창 무드
-    st.help("교재나 유인물 사진을 업로드하시면, 수업 및 인쇄에 즉시 활용할 수 있는 단정하고 정돈된 **표 형태의 워드 문서(.docx)**로 통합 변환해 드립니다.")
-    
-    st.write("") # 자연스러운 여백 추가
+    # [수정] 문제가 되었던 st.help 대신 깔끔하게 정돈된 오피스 무드의 st.info로 전면 교체
+    st.info("💡 **안내**\n\n교재나 유인물 사진을 업로드하시면, 수업 및 제본에 즉시 활용할 수 있는 단정하고 정돈된 **표 형태의 워드 문서(.docx)**로 통합 변환해 드립니다.")
+    st.write("") 
 
     if "GEMINI_API_KEY" in st.secrets:
         api_key = st.secrets["GEMINI_API_KEY"]
@@ -188,9 +186,8 @@ with st.container(border=True):
 
     if uploaded_files:
         st.write("")
-        st.markdown(f"📂 **선택된 아카이브:** 총 `{len(uploaded_files)}개`인쇄 문서 대기 중")
+        st.markdown(f"📂 **선택된 아카이브:** 총 `{len(uploaded_files)}개` 파일 변환 대기 중")
         
-        # 버튼을 강조하여 시각적 투박함 제거
         if st.button("✨ 업로드된 문서 분석 및 Word 파일 생성", type="primary"):
             client = genai.Client(api_key=api_key)
             
