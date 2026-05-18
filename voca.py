@@ -140,13 +140,11 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
             all_data.extend(page_data)
             
         except Exception as e:
-            # 유첨 사진과 100% 일치하는 일일 한도 초과 안내 문구 적용
+            # 일일 한도 초과 안내 문구
             if idx > 0:
-                # 노란색 경고 상자
                 st.warning("⚠️ 구글 계정의 하루 무료 사용량(20장)이 모두 마감되었습니다. 프로그램 보호를 위해 현재까지 변환된 파일들로만 워드를 생성합니다.")
                 break
             else:
-                # 빨간색 에러 상자
                 st.error("❌ 오늘 사용 가능한 구글 무료 제공량(20장)을 모두 초과하여 변환을 시작할 수 없습니다. 내일 다시 시도해 주세요.")
                 return None
             
@@ -168,15 +166,15 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # ==========================================
 st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
 
-# 🎨 유첨 이미지 프로그램의 색감 톤(크림 베이지, 카키 그린, 차분한 블루 안내창) 완전 이식
+# 🎨 디자인 커스텀 브랜딩 CSS (배경색, 폰트 색상, 버튼 및 크레딧 정렬)
 st.markdown("""
     <style>
-    /* 전체 배경을 따뜻하고 아늑한 크림 베이지 톤으로 지배 */
+    /* 전체 배경 크림 베이지 톤 */
     html, body, [data-testid="stAppViewContainer"] {
         background-color: #FBF9F4 !important;
     }
     
-    /* 중앙 정돈 박스 레이아웃 조정 */
+    /* 레이아웃 폭 조정 */
     [data-testid="stMainBlockContainer"] {
         background-color: transparent !important;
         max-width: 720px !important;
@@ -184,7 +182,7 @@ st.markdown("""
         padding-top: 50px !important;
     }
     
-    /* 대화상자 전체 컨테이너 투명 배경화로 썰렁함 제거 */
+    /* 기본 테두리 제거 */
     [data-testid="stVerticalBlockBorderContainer"] {
         border: none !important;
         background: transparent !important;
@@ -192,32 +190,44 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* 딥 카키 그린 타이틀 스타일 스타일링 */
+    /* 상단 타이틀 로고 무드 */
     .brand-title {
         font-size: 52px !important;
         font-weight: 700 !important;
-        color: #556B2F !important; /* 참고 이미지와 동일한 올리브 딥 그린 */
+        color: #556B2F !important;
         text-align: center !important;
         margin-bottom: 5px !important;
         letter-spacing: -1px !important;
     }
+    
+    /* 서브 한글 설명 문구 */
     .brand-caption {
         font-size: 15px !important;
         color: #8C9A86 !important;
         text-align: center !important;
-        margin-bottom: 45px !important;
+        margin-bottom: 5px !important;
         font-weight: 500 !important;
     }
+    
+    /* [수정] 아래줄 우측 정렬로 배치한 (Made by Manju) 스타일 */
+    .brand-author {
+        font-size: 13px !important;
+        color: #A0ABA2 !important;
+        text-align: right !important;
+        margin-bottom: 45px !important;
+        font-weight: 500 !important;
+        padding-right: 5px;
+    }
 
-    /* 이미지의 파일 업로더 상자 톤 매칭 */
+    /* 파일 업로더 박스 색상 */
     [data-testid="stFileUploader"] {
         border: none !important;
-        background-color: #EEF1F6 !important; /* 은은한 라벤더 블루그레이 연회색 */
+        background-color: #EEF1F6 !important;
         border-radius: 14px !important;
         padding: 20px 25px !important;
     }
     
-    /* 눈부신 붉은 버튼을 참고 이미지의 차분한 카키민트(#85A392) 색상으로 완벽 교체 */
+    /* 카키 민트 변환 버튼 */
     div.stButton > button:first-child {
         background-color: #85A392 !important; 
         color: white !important;
@@ -233,7 +243,7 @@ st.markdown("""
         background-color: #6C8B7A !important;
     }
     
-    /* 다운로드 버튼도 전체 무드에 맞춰 차분한 톤 다운 블루그레이 매칭 */
+    /* 다운로드 버튼 블루그레이 스타일 */
     [data-testid="stDownloadButton"]>button {
         background-color: #78909C !important;
         color: white !important;
@@ -245,65 +255,27 @@ st.markdown("""
         background-color: #607D8B !important;
     }
     
-    /* 참고 프로그램의 정갈한 연한 파란색 st.info 스타일 커스텀 */
+    /* 파스텔 블루 안내상자 커스텀 */
     div[data-testid="stNotification"] {
-        background-color: #E8F1FC !important; /* 이미지와 동일한 연한 파스텔 블루 상자 */
+        background-color: #E8F1FC !important;
         border: none !important;
         border-radius: 12px !important;
     }
     div[data-testid="stNotification"] p {
-        color: #1E60B4 !important; /* 안내문 텍스트 역시 이미지와 동일한 딥 블루 코팅 */
+        color: #1E60B4 !important;
         font-weight: 500 !important;
     }
     
-    /* 게이지 진행률 바 색상도 부드럽게 매칭 */
+    /* 게이지 진행률 바 색상 */
     .stProgress > div > div > div > div {
         background-color: #85A392 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 🏷️ 유유자적 감성 브랜드 헤더 섹션
+# 🏷️ 브랜드 헤더 섹션 (소문자 괄호 표기 및 위치 정밀 조정 완료)
 st.markdown("<div class='brand-title'>Voca-converter</div>", unsafe_allow_html=True)
-st.markdown("<div class='brand-caption'>MADE BY MANJU · 사진 속 지문을 인식하여 편집 가능한 워드 문서(.docx)로 변환합니다.</div>", unsafe_allow_html=True)
+st.markdown("<div class='brand-caption'>사진 속 지문을 인식하여 편집 가능한 워드 문서(.docx)로 변환합니다.</div>", unsafe_allow_html=True)
+st.markdown("<div class='brand-author'>(Made by Manju)</div>", unsafe_allow_html=True)
 
-if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
-else:
-    st.error("❌ Streamlit Cloud 설정의 Secrets에 GEMINI_API_KEY가 등록되지 않았습니다.")
-    st.stop()
-
-uploaded_files = st.file_uploader(
-    "변환할 영어 지문 사진을 업로드하세요 (복수 선택 가능)", 
-    type=["jpg", "jpeg", "png"], 
-    accept_multiple_files=True
-)
-
-if uploaded_files:
-    st.write("")
-    st.markdown(f"📂 **{len(uploaded_files)}개의 파일이 선택되었습니다.**")
-    
-    if st.button("Word 파일로 변환하기 ✨", type="primary"):
-        client = genai.Client(api_key=api_key)
-        
-        status_text = st.empty()
-        progress_bar = st.progress(0)
-        
-        all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
-        
-        if all_word_data:
-            st.toast("단어 데이터 정제가 완료되었습니다!")
-            st.write("---")
-            st.write("### 🔍 데이터 통합 미리보기")
-            st.dataframe(all_word_data, use_container_width=True)
-            
-            word_file_buffer = create_word_document(all_word_data)
-            
-            st.write("")
-            st.download_button(
-                label="📥 정제된 수업용 Word 문서 다운로드 (.docx)",
-                data=word_file_buffer,
-                file_name="🔮_통합_영어단어장.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                use_container_width=True
-            )
+if "GEMINI_API_KEY" in st.secrets
