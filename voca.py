@@ -9,7 +9,6 @@ from docx.oxml.ns import qn
 import json
 import io
 import asyncio
-import time
 
 # ==========================================
 # 1. 워드 파일 디자인 & 생성 헬퍼 함수
@@ -95,9 +94,11 @@ def create_word_document(all_word_data):
     return buffer
 
 # ==========================================
-# 2. 비동기 병렬 처리 함수
+# 2. 안전한 비동기 병렬 처리 함수 (에러 방지 핵심)
 # ==========================================
-async def analyze_single_image(client, file, api_key):
+async def analyze_single_image(client, file, api_key, delay):
+    """서버 과부하를 막기 위해 아주 짧은 대기 후 API를 호출합니다."""
+    await asyncio.sleep(delay)
     loop = asyncio.get_event_loop()
     image_bytes = file.read()
     
@@ -124,44 +125,35 @@ async def analyze_single_image(client, file, api_key):
     return json.loads(response.text)
 
 async def run_smooth_progress(progress_bar, status_text, stop_event, total_files):
-    """0%부터 95%까지 부드럽게 숫자를 올려주는 애니메이션 함수"""
     current_percent = 0
-    # AI 응답이 오기 전까지 점진적으로 상승 (95%에서 대기)
     while not stop_event.is_set() and current_percent < 95:
-        # 초반에는 조금 빠르게, 후반으로 갈수록 신중하게 상승
         if current_percent < 50:
-            current_percent += 1.5
+            current_percent += 1.2
         elif current_percent < 80:
-            current_percent += 0.8
+            current_percent += 0.6
         else:
-            current_percent += 0.3
+            current_percent += 0.2
             
         display_percent = min(int(current_percent), 95)
         progress_bar.progress(display_percent / 100)
         status_text.markdown(f"**⚡ 초고속 비동기 엔진 가동 중... {display_percent}%** (총 {total_files}장의 사진 병렬 분석 중)")
-        await asyncio.sleep(0.05) # 0.05초 간격으로 매우 부드럽게 갱신
+        await asyncio.sleep(0.05)
 
 async def process_all_images(client, uploaded_files, api_key, progress_bar, status_text):
-    """API 요청과 부드러운 게이지 상승을 동시에 처리"""
-    tasks = [analyze_single_image(client, file, api_key) for file in uploaded_files]
+    # 각 파일별로 0.3초씩 간격을 두어 구글 서버 트래픽 초과(ServerError)를 원천 차단합니다.
+    tasks = [analyze_single_image(client, file, api_key, idx * 0.3) for idx, file in enumerate(uploaded_files)]
     
-    # 게이지 애니메이션을 제어할 이벤트 플래그
     stop_event = asyncio.Event()
-    
-    # 애니메이션 태스크 시작
     progress_task = asyncio.create_task(
         run_smooth_progress(progress_bar, status_text, stop_event, len(uploaded_files))
     )
     
-    # 실제 AI 요청 돌리기 (전체 동시 실행)
     try:
         results = await asyncio.gather(*tasks)
     finally:
-        # AI 분석이 모두 끝나면 애니메이션 루프 종료 명령
         stop_event.set()
         await progress_task
         
-    # 완료 시 즉시 100%로 채우기
     progress_bar.progress(1.0)
     status_text.markdown("**🎉 단어 분석 진행률: 100% (완료!)**")
     
@@ -173,7 +165,7 @@ async def process_all_images(client, uploaded_files, api_key, progress_bar, stat
 # ==========================================
 # 3. Streamlit 메인 UI 대시보드
 # ==========================================
-st.set_page_config(page_title="Voca 변환기 초고속", layout="centered", page_icon="📝")
+st.set_page_config(page_title="Voca 변환기 안정화", layout="centered", page_icon="📝")
 
 st.title("📝 멀티 이미지 단어장 워드 변환기")
 st.write("비동기 병렬 분석 엔진을 도입하여 여러 장의 사진도 눈 깜짝할 새에 하나의 워드 파일로 통합합니다.")
@@ -199,7 +191,6 @@ if uploaded_files:
         status_text = st.empty()
         progress_bar = st.progress(0)
         
-        # 병렬 프로세스 실행
         all_word_data = asyncio.run(
             process_all_images(client, uploaded_files, api_key, progress_bar, status_text)
         )
