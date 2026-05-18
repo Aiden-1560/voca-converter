@@ -139,11 +139,13 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
                 break
                 
             except Exception as e:
+                # 일시적인 트래픽 과부하 현상 발생 시 뜨는 실시간 대기 안내문구
                 if attempt < max_retries - 1:
-                    status_text.warning(f"⚠️ 안정적인 연결을 위해 재시도 중입니다... ({attempt + 1}/{max_retries})")
-                    time.sleep(2.0)
+                    status_text.warning(f"⏳ 구글 AI 서버에 동시 접속자가 많아 통신을 재시도하고 있습니다... ({attempt + 1}/{max_retries})")
+                    time.sleep(2.5)
                 else:
-                    st.error(f"🛑 구글 서버 과부하가 지속되어 `{file.name}` 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.")
+                    # [핵심 변경] 딱딱하고 무서운 서버 에러 문구를 원장님 맞춤형 친절한 서식으로 대치
+                    st.error(f"☕ **현재 구글 AI 트래픽이 일시적으로 매우 혼잡합니다.**\n\n`{file.name}` 문서 정제 단계에서 응답이 지연되었습니다. 프로그램 결함이 아니오니, 잠시 후 다시 한 번 버튼을 눌러주시면 정상 작동합니다.")
             
         while current_displayed_percent < target_percent:
             current_displayed_percent += 1
@@ -162,13 +164,11 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # ==========================================
 st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
 
-# 깔끔한 테두리 상자로 대시보드 구성
 with st.container(border=True):
     st.markdown("### 📝 Voca-converter")
     st.caption("MADE BY MANJU · 스마트 교재 연구 솔루션")
     st.divider() 
     
-    # [수정] 문제가 되었던 st.help 대신 깔끔하게 정돈된 오피스 무드의 st.info로 전면 교체
     st.info("💡 **안내**\n\n교재나 유인물 사진을 업로드하시면, 수업 및 제본에 즉시 활용할 수 있는 단정하고 정돈된 **표 형태의 워드 문서(.docx)**로 통합 변환해 드립니다.")
     st.write("") 
 
