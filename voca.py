@@ -118,7 +118,7 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
         while current_displayed_percent < pre_target:
             current_displayed_percent += 1
             progress_bar.progress(current_displayed_percent / 100)
-            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 분석 준비 중)")
+            status_text.markdown(f"<div class='status-msg'>🌱 단어 아카이브 분석 중... {current_displayed_percent}% (`{file.name}` 판독 중)</div>", unsafe_allow_html=True)
             time.sleep(0.01)
             
         page_data = None
@@ -143,21 +143,21 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
                 
             except Exception as e:
                 if attempt < max_retries - 1:
-                    status_text.markdown(f"**⚠️ 구글 서버 혼잡으로 재시도 중... ({attempt + 1}/{max_retries})**")
+                    status_text.markdown(f"<div class='status-msg' style='color:#cca01a;'>⚠️ 안정한 연결을 위해 재시도 중입니다... ({attempt + 1}/{max_retries})</div>", unsafe_allow_html=True)
                     time.sleep(2.0)
                 else:
-                    st.error(f"🛑 구글 서버 과부하가 지속되어 `{file.name}` 처리에 실패했습니다. 잠시 후 다시 버튼을 눌러주세요.")
+                    st.error(f"🛑 구글 서버 과부하가 지속되어 `{file.name}` 처리에 실패했습니다. 잠시 후 다시 시도해 주세요.")
             
         while current_displayed_percent < target_percent:
             current_displayed_percent += 1
             progress_bar.progress(current_displayed_percent / 100)
-            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 정제 완료)")
+            status_text.markdown(f"<div class='status-msg'>✨ 단어 아카이브 분석 중... {current_displayed_percent}% (`{file.name}` 정제 완료)</div>", unsafe_allow_html=True)
             time.sleep(0.01)
             
         time.sleep(0.2)
         
     progress_bar.progress(1.0)
-    status_text.markdown("**🎉 단어 분석 진행률: 100% (모든 작업 완료!)**")
+    status_text.markdown("<div class='status-msg' style='color:#2e7d32; font-weight:bold;'>🌿 정제 프로세스가 완료되었습니다. (100%)</div>", unsafe_allow_html=True)
     return all_data
 
 # ==========================================
@@ -165,11 +165,115 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # ==========================================
 st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
 
-# [변경 부문] 제목을 새로운 텍스트로 교체하고, 기존 글자 크기(title)에서 약 20% 축소한 h2 서식 적용
-st.markdown("## 📝 Voca-converter")
-st.markdown("<p style='font-size: 16px; color: gray; margin-top: -15px; margin-bottom: 25px;'><strong>(Made by Manju)</strong></p>", unsafe_allow_html=True)
+# 🎨 30대 학원 원장이 선호하는 감성 & 스마트 테마 고급 CSS 스타일링 주입
+st.markdown("""
+    <style>
+    /* 전체 배경 및 폰트 무드 조절 */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+    
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #FAFAFA;
+        font-family: 'Noto Sans KR', sans-serif;
+    }
+    
+    /* 카드 및 메인 컨테이너 디자인 정돈 */
+    [data-testid="stMainBlockContainer"] {
+        background-color: #FFFFFF;
+        padding: 40px 50px !important;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        margin-top: 30px;
+    }
+    
+    /* 세련된 딥 네이비 / 차분한 골드 무드의 타이틀 디자인 */
+    .main-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1E293B; /* 차분한 딥 실버블랙 */
+        margin-bottom: 2px;
+        letter-spacing: -0.5px;
+    }
+    .sub-title {
+        font-size: 13px;
+        color: #94A3B8; /* 소프트 그레이 */
+        font-weight: 500;
+        margin-bottom: 35px;
+        letter-spacing: 0.5px;
+    }
+    .description-text {
+        font-size: 15px;
+        color: #64748B;
+        line-height: 1.6;
+        margin-bottom: 30px;
+        background-color: #F8FAFC;
+        padding: 15px 20px;
+        border-left: 4px solid #475569;
+        border-radius: 4px;
+    }
+    
+    /* 파일 업로더 영역 감성 커스텀 */
+    [data-testid="stFileUploader"] {
+        border: 1px dashed #CBD5E1 !important;
+        background-color: #F8FAFC !important;
+        border-radius: 12px !important;
+        padding: 10px !important;
+    }
+    
+    /* 단정하고 고급스러운 버튼 디자인 스타일링 */
+    .stButton>button {
+        background-color: #334155 !important; /* 미드나잇 네이비 */
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        font-size: 15px !important;
+        font-weight: 500 !important;
+        border: none !important;
+        box-shadow: 0 2px 8px rgba(51, 65, 85, 0.15) !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        margin-top: 15px;
+    }
+    .stButton>button:hover {
+        background-color: #1E293B !important;
+        box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25) !important;
+        transform: translateY(-1px);
+    }
+    
+    /* 다운로드 버튼 (초록색 톤으로 은은하게 매칭) */
+    [data-testid="stDownloadButton"]>button {
+        background-color: #0F766E !important; /* 차분한 청록색 */
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        font-size: 15px !important;
+        font-weight: 500 !important;
+        border: none !important;
+        box-shadow: 0 2px 8px rgba(15, 118, 110, 0.15) !important;
+        width: 100% !important;
+    }
+    [data-testid="stDownloadButton"]>button:hover {
+        background-color: #115E59 !important;
+        box-shadow: 0 4px 12px rgba(17, 94, 89, 0.25) !important;
+    }
+    
+    /* 진행 상태 컴포넌트 커스텀 */
+    .status-msg {
+        font-size: 14px;
+        color: #475569;
+        margin-bottom: 8px;
+        margin-top: 15px;
+    }
+    .stProgress > div > div > div > div {
+        background-color: #475569 !important; /* 고급스러운 무채색 바 */
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-st.write("24시간 언제 어디서나 단어장 사진들을 업로드하여 하나의 깔끔한 워드(.docx) 파일로 통합 다운로드하세요.")
+# 🏷️ 적용된 감성 타이틀 섹션
+st.markdown("<div class='main-title'>📝 Voca-converter</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-title'>DESIGNED BY MANJU</div>", unsafe_allow_html=True)
+
+st.markdown("<div class='description-text'>교재나 유인물 사진을 업로드하시면, 학원 수업에 즉시 활용할 수 있는 단정하고 정돈된 <strong>표 형태의 워드 문서(.docx)</strong>로 통합 변환해 드립니다.</div>", unsafe_allow_html=True)
 
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
@@ -178,15 +282,15 @@ else:
     st.stop()
 
 uploaded_files = st.file_uploader(
-    "단어장 사진 파일들을 선택하세요 (여러 장 동시 선택 가능)", 
+    "교재 및 단어장 사진 파일을 선택하세요 (여러 장 동시 선택 가능)", 
     type=["jpg", "jpeg", "png"], 
     accept_multiple_files=True
 )
 
 if uploaded_files:
-    st.write(f"📂 **선택된 파일 수:** {len(uploaded_files)}개")
+    st.markdown(f"<div style='font-size:14px; color:#64748B; margin-bottom:15px;'>📂 <strong>선택된 아카이브:</strong> 총 {len(uploaded_files)}개의 문서 파일</div>", unsafe_allow_html=True)
     
-    if st.button("🚀 안전한 단어 분석 및 Word 파일 생성"):
+    if st.button("✨ 업로드된 문서 분석 및 Word 파일 생성"):
         client = genai.Client(api_key=api_key)
         
         status_text = st.empty()
@@ -195,14 +299,15 @@ if uploaded_files:
         all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
         
         if all_word_data:
-            st.success("🎉 모든 사진의 단어 통합 완료!")
-            st.write("### 🔍 통합 추출 데이터 미리보기")
+            st.success("🎉 모든 단어 데이터 정제가 성공적으로 완료되었습니다!")
+            st.write("### 🔍 데이터 통합 미리보기")
             st.dataframe(all_word_data, use_container_width=True)
             
             word_file_buffer = create_word_document(all_word_data)
             
+            st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
             st.download_button(
-                label="📥 깔끔한 Word 문서 다운로드 (.docx)",
+                label="📥 정제된 수업용 Word 문서 다운로드 (.docx)",
                 data=word_file_buffer,
                 file_name="🔮_통합_영어단어장.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
