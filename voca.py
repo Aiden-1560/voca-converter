@@ -94,10 +94,9 @@ def create_word_document(all_word_data):
     return buffer
 
 # ==========================================
-# 2. 안정적인 순차 처리 및 부드러운 게이지 함수
+# 2. 서버 에러 발생 시 자동 재시도하는 분석 함수
 # ==========================================
 def process_images_safely(client, uploaded_files, api_key, progress_bar, status_text):
-    """안정적으로 순차 처리하되, 화면 퍼센트는 실시간 애니메이션처럼 부드럽게 올립니다."""
     all_data = []
     total_files = len(uploaded_files)
     
@@ -113,45 +112,56 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
     current_displayed_percent = 0
     
     for idx, file in enumerate(uploaded_files):
-        # 목표 퍼센트 계산 (예: 5장 중 1장째 시작할 때 목표는 20%)
         target_percent = int(((idx + 1) / total_files) * 100)
         
-        # 1. AI 호출 전에 게이지를 목표 지점 근처까지 부드럽게 주르륵 올리기
-        # (예: 0%에서 18%까지 부드럽게 상승 시각 효과)
+        # 애니메이션: 이전 장에서 이번 장 목표 직전까지 부드럽게 상승
         pre_target = target_percent - 3 if target_percent > 3 else 0
         while current_displayed_percent < pre_target:
             current_displayed_percent += 1
             progress_bar.progress(current_displayed_percent / 100)
-            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 처리 중)")
+            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 분석 준비 중)")
             time.sleep(0.01)
             
-        # 2. 실제 안전하게 구글 API 호출 (순차적 호출로 ServerError 완벽 방지)
-        try:
-            image_bytes = file.read()
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[
-                    types.Part.from_bytes(data=image_bytes, mime_type=file.type),
-                    prompt
-                ],
-                config=types.GenerateContentConfig(response_mime_type="application/json")
-            )
-            page_data = json.loads(response.text)
-            all_data.extend(page_data)
-        except Exception as e:
-            st.error(f"`{file.name}` 처리 중 서버 통신 에러 발생: {e}")
+        # [핵심 보완] 구글 서버 과부하(503) 대응용 자동 재시도 루프
+        page_data = None
+        max_retries = 3  # 최대 3번까지 재시도
+        
+        for attempt in range(max_retries):
+            try:
+                # 파일 포인터를 처음으로 되돌려 신선한 상태로 읽기
+                file.seek(0)
+                image_bytes = file.read()
+                
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=[
+                        types.Part.from_bytes(data=image_bytes, mime_type=file.type),
+                        prompt
+                    ],
+                    config=types.GenerateContentConfig(response_mime_type="application/json")
+                )
+                page_data = json.loads(response.text)
+                all_data.extend(page_data)
+                break  # 성공했으므로 재시도 루프 탈출!
+                
+            except Exception as e:
+                # 503 과부하 에러가 나면 2초 쉬었다가 다시 시도
+                if attempt < max_retries - 1:
+                    status_text.markdown(f"**⚠️ 구글 서버 혼잡으로 재시도 중... ({attempt + 1}/{max_retries})**")
+                    time.sleep(2.0)
+                else:
+                    # 3번 다 실패하면 최종 에러 메시지 출력
+                    st.error(f"🛑 구글 서버 과부하가 지속되어 `{file.name}` 처리에 실패했습니다. 잠시 후 다시 버튼을 눌러주세요.")
             
-        # 3. 한 장 처리가 완료되면 목표 퍼센트까지 완전히 채우기
+        # 완료 애니메이션: 목표 퍼센트까지 완전히 채우기
         while current_displayed_percent < target_percent:
             current_displayed_percent += 1
             progress_bar.progress(current_displayed_percent / 100)
-            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 완료)")
+            status_text.markdown(f"**⏳ 단어장 분석 중... {current_displayed_percent}%** (`{file.name}` 정제 완료)")
             time.sleep(0.01)
             
-        # 구글 무료 서버 안정을 위해 사진들 사이에 아주 미세한 휴식 시간 추가
         time.sleep(0.2)
         
-    # 최종 완료 처리
     progress_bar.progress(1.0)
     status_text.markdown("**🎉 단어 분석 진행률: 100% (모든 작업 완료!)**")
     return all_data
@@ -159,10 +169,10 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # ==========================================
 # 3. Streamlit 메인 UI 대시보드
 # ==========================================
-st.set_page_config(page_title="Voca 변환기 안정화", layout="centered", page_icon="📝")
+st.set_page_config(page_title="Voca 변환기 완벽안정화", layout="centered", page_icon="📝")
 
 st.title("📝 멀티 이미지 단어장 워드 변환기")
-st.write("안정적인 이미지 분석 엔진을 통해 에러 없이 여러 장의 사진을 하나의 깔끔한 워드 파일로 통합합니다.")
+st.write("구글 서버 혼잡 제어 엔진을 탑재하여 에러 상황에서도 안정적으로 단어장을 통합 빌드합니다.")
 
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
@@ -185,7 +195,6 @@ if uploaded_files:
         status_text = st.empty()
         progress_bar = st.progress(0)
         
-        # 안정화된 순차+애니메이션 함수 실행
         all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
         
         if all_word_data:
