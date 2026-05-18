@@ -8,6 +8,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import json
 import io
+import asyncio
 
 # ==========================================
 # 1. 워드 파일 디자인 & 생성 헬퍼 함수
@@ -93,21 +94,76 @@ def create_word_document(all_word_data):
     return buffer
 
 # ==========================================
-# 2. Streamlit 메인 UI 대시보드
+# 2. 비동기 병렬 처리 함수 (속도 개선 핵심)
 # ==========================================
-st.set_page_config(page_title="Voca 변환기 자동화", layout="centered", page_icon="📝")
+async def analyze_single_image(client, file, api_key):
+    """하나의 이미지를 비동기적으로 AI에게 요청하는 함수"""
+    # 비동기 실행을 위해 래핑
+    loop = asyncio.get_event_loop()
+    image_bytes = file.read()
+    
+    prompt = """
+    이 이미지에서 영어 단어, 우리말 뜻, 영영 풀이를 추출해서 정확한 JSON 배열 형식으로 출력해줘.
+    필기구로 수정한 흔적이나 추가로 적은 필기는 무시하고, 원래 인쇄되어 있던 텍스트만 추출해줘.
+    결과는 오직 아래 구조를 가진 JSON 데이터만 반환해야 해:
+    [
+      {"word": "단어", "meaning": "품사 및 뜻", "definition": "영영 풀이 내용"}
+    ]
+    """
+    
+    # 별도 스레드에서 동기 API 호출을 비동기처럼 처리
+    def call_api():
+        return client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                types.Part.from_bytes(data=image_bytes, mime_type=file.type),
+                prompt
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
+        
+    response = await loop.run_in_executor(None, call_api)
+    return json.loads(response.text)
 
-st.title("📝 멀티 이미지 단어장 워드 변환기")
-st.write("24시간 언제 어디서나 단어장 사진들을 업로드하여 하나의 깔끔한 워드(.docx) 파일로 통합 다운로드하세요.")
+async def process_all_images(client, uploaded_files, api_key, progress_bar, status_text):
+    """모든 이미지를 동시에 실행하고 실시간 퍼센트를 갱신"""
+    tasks = [analyze_single_image(client, file, api_key) for file in uploaded_files]
+    total_tasks = len(tasks)
+    completed_tasks = 0
+    all_data = []
+    
+    # 각각의 태스크가 완료될 때마다 이벤트를 받아 퍼센트 게이지 상승
+    for future in asyncio.as_completed(tasks):
+        try:
+            page_data = await future
+            all_data.extend(page_data)
+        except Exception as e:
+            st.error(f"파일 처리 중 오류 발생: {e}")
+            
+        completed_tasks += 1
+        percent = int((completed_tasks / total_tasks) * 100)
+        
+        # 시각적 게이지 및 퍼센트 텍스트 실시간 업데이트
+        progress_bar.progress(completed_tasks / total_tasks)
+        status_text.markdown(f"**⏳ 단어 분석 진행률: {percent}% ({completed_tasks}/{total_tasks} 완료)**")
+        
+    return all_data
 
-# [핵심 변경] 사용자가 입력하는 창을 없애고, 서버 금고(Secrets)에서 키를 자동으로 가져옵니다.
+# ==========================================
+# 3. Streamlit 메인 UI 대시보드
+# ==========================================
+st.set_page_config(page_title="Voca 변환기 초고속", layout="centered", page_icon="📝")
+
+st.title("📝 멀티 이미지 단어장 워드 변환기 (초고속 버전)")
+st.write("비동기 병렬 분석 엔진을 도입하여 여러 장의 사진도 눈 깜짝할 새에 하나의 워드 파일로 통합합니다.")
+
+# Secrets 금고에서 API Key 자동 로드
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
     st.error("❌ Streamlit Cloud 설정의 Secrets에 GEMINI_API_KEY가 등록되지 않았습니다.")
     st.stop()
 
-# 여러 장 업로드
 uploaded_files = st.file_uploader(
     "단어장 사진 파일들을 선택하세요 (여러 장 동시 선택 가능)", 
     type=["jpg", "jpeg", "png"], 
@@ -117,41 +173,19 @@ uploaded_files = st.file_uploader(
 if uploaded_files:
     st.write(f"📂 **선택된 파일 수:** {len(uploaded_files)}개")
     
-    if st.button("🚀 전체 사진 분석 및 하나의 Word 파일로 병합 생성"):
-        all_word_data = []
-        file_progress = st.progress(0)
+    if st.button("🚀 초고속 병렬 분석 및 Word 파일 생성"):
+        client = genai.Client(api_key=api_key)
         
-        for idx, file in enumerate(uploaded_files):
-            st.write(f"🔄 ({idx+1}/{len(uploaded_files)}) `{file.name}` 분석 중...")
-            try:
-                client = genai.Client(api_key=api_key)
-                image_bytes = file.read()
-                
-                prompt = """
-                이 이미지에서 영어 단어, 우리말 뜻, 영영 풀이를 추출해서 정확한 JSON 배열 형식으로 출력해줘.
-                필기구로 수정한 흔적이나 추가로 적은 필기는 무시하고, 원래 인쇄되어 있던 텍스트만 추출해줘.
-                결과는 오직 아래 구조를 가진 JSON 데이터만 반환해야 해:
-                [
-                  {"word": "단어", "meaning": "품사 및 뜻", "definition": "영영 풀이 내용"}
-                    ]
-                """
-                
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=[
-                        types.Part.from_bytes(data=image_bytes, mime_type=file.type),
-                        prompt
-                    ],
-                    config=types.GenerateContentConfig(response_mime_type="application/json")
-                )
-                
-                page_data = json.loads(response.text)
-                all_word_data.extend(page_data)
-                
-            except Exception as e:
-                st.error(f"`{file.name}` 처리 중 오류 발생: {e}")
-            
-            file_progress.progress((idx + 1) / len(uploaded_files))
+        # 시각적인 진행률 요소를 화면에 먼저 배치
+        status_text = st.empty()
+        progress_bar = st.progress(0)
+        
+        status_text.markdown("**⚡ 비동기 병렬 엔진 가동 중... 잠시만 기다려주세요.**")
+        
+        # 비동기 루프 구동
+        all_word_data = asyncio.run(
+            process_all_images(client, uploaded_files, api_key, progress_bar, status_text)
+        )
         
         # 파일 빌드 및 브라우저 다운로드 제공
         if all_word_data:
