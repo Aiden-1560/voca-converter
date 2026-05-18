@@ -23,7 +23,7 @@ def set_cell_borders(cell, color="D9D9D9", sz="4", val="single"):
         border.set(qn('w:space'), '0')
         border.set(qn('w:color'), color)
     tcBorders.append(border)
-    tcPr.append(tcBorders)
+    tcPr.append(tcPr)
 
 def set_cell_shading(cell, color):
     tcPr = cell._tc.get_or_add_tcPr()
@@ -139,13 +139,12 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
                 break
                 
             except Exception as e:
-                # 일시적인 트래픽 과부하 현상 발생 시 뜨는 실시간 대기 안내문구
                 if attempt < max_retries - 1:
                     status_text.warning(f"⏳ 구글 AI 서버에 동시 접속자가 많아 통신을 재시도하고 있습니다... ({attempt + 1}/{max_retries})")
                     time.sleep(2.5)
                 else:
-                    # [핵심 변경] 딱딱하고 무서운 서버 에러 문구를 원장님 맞춤형 친절한 서식으로 대치
-                    st.error(f"☕ **현재 구글 AI 트래픽이 일시적으로 매우 혼잡합니다.**\n\n`{file.name}` 문서 정제 단계에서 응답이 지연되었습니다. 프로그램 결함이 아니오니, 잠시 후 다시 한 번 버튼을 눌러주시면 정상 작동합니다.")
+                    # [수정] 하루 무료 사용량 초과(분당 트래픽 차단 포함) 상황에 맞는 직관적인 안내문구로 전면 개편
+                    st.error(f"🔋 **오늘 제공된 구글 AI 분석 에너지를 모두 소모했습니다.**\n\n구글 무료 서버 정책상 일일 업로드 제한(또는 단시간 과다 요청 수 제한)에 도달하여 `{file.name}` 처리 단계에서 멈췄습니다. 내일 다시 시도하시거나, 다른 구글 계정의 API 키로 교체하시면 즉시 이어서 사용이 가능합니다.")
             
         while current_displayed_percent < target_percent:
             current_displayed_percent += 1
@@ -163,6 +162,21 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # 3. Streamlit 메인 UI 대시보드
 # ==========================================
 st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
+
+# [수정] 눈이 부시던 형광 빨간색 버튼을 차분하고 신뢰감을 주는 '고급 딥 네이비' 테마로 변경하는 스타일 태그 추가
+st.markdown("""
+    <style>
+    div.stButton > button:first-child {
+        background-color: #1E3A8A !important;
+        color: white !important;
+        border: none !important;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #172554 !important;
+        color: white !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.markdown("### 📝 Voca-converter")
@@ -188,6 +202,7 @@ with st.container(border=True):
         st.write("")
         st.markdown(f"📂 **선택된 아카이브:** 총 `{len(uploaded_files)}개` 파일 변환 대기 중")
         
+        # 버튼을 누르면 위에서 정의한 CSS 덕분에 고급스러운 딥 네이비 색상으로 출력됩니다.
         if st.button("✨ 업로드된 문서 분석 및 Word 파일 생성", type="primary"):
             client = genai.Client(api_key=api_key)
             
