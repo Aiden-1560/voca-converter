@@ -114,7 +114,7 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
     for idx, file in enumerate(uploaded_files):
         target_percent = int(((idx + 1) / total_files) * 100)
         
-        # 처리 대기 상태 애니메이션 및 모래시계 문구 표시
+        # 처리 대기 상태 애니메이션 및 참고 파일의 정확한 모래시계 문구 표시
         pre_target = target_percent - 3 if target_percent > 3 else 0
         while current_displayed_percent < pre_target:
             current_displayed_percent += 1
@@ -140,13 +140,13 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
             all_data.extend(page_data)
             
         except Exception as e:
-            # 구글 사용량 한도 초과 또는 트래픽 에러 발생 시 처리
+            # 유첨 사진과 100% 일치하는 일일 한도 초과 안내 문구 적용
             if idx > 0:
-                # 사진 여러 장 중 일부는 성공하고 중간에 끊긴 경우 (노란색 상자)
+                # 노란색 경고 상자
                 st.warning("⚠️ 구글 계정의 하루 무료 사용량(20장)이 모두 마감되었습니다. 프로그램 보호를 위해 현재까지 변환된 파일들로만 워드를 생성합니다.")
                 break
             else:
-                # 첫 장부터 아예 사용량 초과로 막힌 경우 (빨간색 상자)
+                # 빨간색 에러 상자
                 st.error("❌ 오늘 사용 가능한 구글 무료 제공량(20장)을 모두 초과하여 변환을 시작할 수 없습니다. 내일 다시 시도해 주세요.")
                 return None
             
@@ -168,67 +168,142 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # ==========================================
 st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
 
-# [수정] 원 생성 버튼 색상을 세련되고 연한 파스텔톤 블루(#4A90E2) 스타일로 강제 지정
+# 🎨 유첨 이미지 프로그램의 색감 톤(크림 베이지, 카키 그린, 차분한 블루 안내창) 완전 이식
 st.markdown("""
     <style>
-    div.stButton > button:first-child {
-        background-color: #4A90E2 !important;
-        color: white !important;
+    /* 전체 배경을 따뜻하고 아늑한 크림 베이지 톤으로 지배 */
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #FBF9F4 !important;
+    }
+    
+    /* 중앙 정돈 박스 레이아웃 조정 */
+    [data-testid="stMainBlockContainer"] {
+        background-color: transparent !important;
+        max-width: 720px !important;
+        margin: 0 auto !important;
+        padding-top: 50px !important;
+    }
+    
+    /* 대화상자 전체 컨테이너 투명 배경화로 썰렁함 제거 */
+    [data-testid="stVerticalBlockBorderContainer"] {
         border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+
+    /* 딥 카키 그린 타이틀 스타일 스타일링 */
+    .brand-title {
+        font-size: 52px !important;
+        font-weight: 700 !important;
+        color: #556B2F !important; /* 참고 이미지와 동일한 올리브 딥 그린 */
+        text-align: center !important;
+        margin-bottom: 5px !important;
+        letter-spacing: -1px !important;
+    }
+    .brand-caption {
+        font-size: 15px !important;
+        color: #8C9A86 !important;
+        text-align: center !important;
+        margin-bottom: 45px !important;
         font-weight: 500 !important;
     }
-    div.stButton > button:first-child:hover {
-        background-color: #357ABD !important;
+
+    /* 이미지의 파일 업로더 상자 톤 매칭 */
+    [data-testid="stFileUploader"] {
+        border: none !important;
+        background-color: #EEF1F6 !important; /* 은은한 라벤더 블루그레이 연회색 */
+        border-radius: 14px !important;
+        padding: 20px 25px !important;
+    }
+    
+    /* 눈부신 붉은 버튼을 참고 이미지의 차분한 카키민트(#85A392) 색상으로 완벽 교체 */
+    div.stButton > button:first-child {
+        background-color: #85A392 !important; 
         color: white !important;
+        border: none !important;
+        font-size: 16px !important;
+        font-weight: 500 !important;
+        border-radius: 10px !important;
+        padding: 12px 24px !important;
+        box-shadow: none !important;
+        width: auto !important;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #6C8B7A !important;
+    }
+    
+    /* 다운로드 버튼도 전체 무드에 맞춰 차분한 톤 다운 블루그레이 매칭 */
+    [data-testid="stDownloadButton"]>button {
+        background-color: #78909C !important;
+        color: white !important;
+        border-radius: 10px !important;
+        border: none !important;
+        padding: 12px 24px !important;
+    }
+    [data-testid="stDownloadButton"]>button:hover {
+        background-color: #607D8B !important;
+    }
+    
+    /* 참고 프로그램의 정갈한 연한 파란색 st.info 스타일 커스텀 */
+    div[data-testid="stNotification"] {
+        background-color: #E8F1FC !important; /* 이미지와 동일한 연한 파스텔 블루 상자 */
+        border: none !important;
+        border-radius: 12px !important;
+    }
+    div[data-testid="stNotification"] p {
+        color: #1E60B4 !important; /* 안내문 텍스트 역시 이미지와 동일한 딥 블루 코팅 */
+        font-weight: 500 !important;
+    }
+    
+    /* 게이지 진행률 바 색상도 부드럽게 매칭 */
+    .stProgress > div > div > div > div {
+        background-color: #85A392 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-with st.container(border=True):
-    st.markdown("### 📝 Voca-converter")
-    st.caption("MADE BY MANJU · 스마트 교재 연구 솔루션")
-    st.divider() 
+# 🏷️ 유유자적 감성 브랜드 헤더 섹션
+st.markdown("<div class='brand-title'>Voca-converter</div>", unsafe_allow_html=True)
+st.markdown("<div class='brand-caption'>MADE BY MANJU · 사진 속 지문을 인식하여 편집 가능한 워드 문서(.docx)로 변환합니다.</div>", unsafe_allow_html=True)
+
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    st.error("❌ Streamlit Cloud 설정의 Secrets에 GEMINI_API_KEY가 등록되지 않았습니다.")
+    st.stop()
+
+uploaded_files = st.file_uploader(
+    "변환할 영어 지문 사진을 업로드하세요 (복수 선택 가능)", 
+    type=["jpg", "jpeg", "png"], 
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    st.write("")
+    st.markdown(f"📂 **{len(uploaded_files)}개의 파일이 선택되었습니다.**")
     
-    st.info("💡 **안내**\n\n교재나 유인물 사진을 업로드하시면, 수업 및 제본에 즉시 활용할 수 있는 단정하고 정돈된 **표 형태의 워드 문서(.docx)**로 통합 변환해 드립니다.")
-    st.write("") 
-
-    if "GEMINI_API_KEY" in st.secrets:
-        api_key = st.secrets["GEMINI_API_KEY"]
-    else:
-        st.error("❌ Streamlit Cloud 설정의 Secrets에 GEMINI_API_KEY가 등록되지 않았습니다.")
-        st.stop()
-
-    uploaded_files = st.file_uploader(
-        "교재 및 단어장 사진 파일을 선택하세요 (여러 장 동시 선택 가능)", 
-        type=["jpg", "jpeg", "png"], 
-        accept_multiple_files=True
-    )
-
-    if uploaded_files:
-        st.write("")
-        st.markdown(f"📂 **선택된 아카이브:** 총 `{len(uploaded_files)}개` 파일 변환 대기 중")
+    if st.button("Word 파일로 변환하기 ✨", type="primary"):
+        client = genai.Client(api_key=api_key)
         
-        if st.button("✨ 업로드된 문서 분석 및 Word 파일 생성", type="primary"):
-            client = genai.Client(api_key=api_key)
+        status_text = st.empty()
+        progress_bar = st.progress(0)
+        
+        all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
+        
+        if all_word_data:
+            st.toast("단어 데이터 정제가 완료되었습니다!")
+            st.write("---")
+            st.write("### 🔍 데이터 통합 미리보기")
+            st.dataframe(all_word_data, use_container_width=True)
             
-            status_text = st.empty()
-            progress_bar = st.progress(0)
+            word_file_buffer = create_word_document(all_word_data)
             
-            all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
-            
-            if all_word_data:
-                st.toast("단어 데이터 정제가 완료되었습니다!")
-                st.write("---")
-                st.write("### 🔍 데이터 통합 미리보기")
-                st.dataframe(all_word_data, use_container_width=True)
-                
-                word_file_buffer = create_word_document(all_word_data)
-                
-                st.write("")
-                st.download_button(
-                    label="📥 정제된 수업용 Word 문서 다운로드 (.docx)",
-                    data=word_file_buffer,
-                    file_name="🔮_통합_영어단어장.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
-                )
+            st.write("")
+            st.download_button(
+                label="📥 정제된 수업용 Word 문서 다운로드 (.docx)",
+                data=word_file_buffer,
+                file_name="🔮_통합_영어단어장.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True
+            )
