@@ -278,4 +278,43 @@ st.markdown("<div class='brand-title'>Voca-converter</div>", unsafe_allow_html=T
 st.markdown("<div class='brand-caption'>사진 속 지문을 인식하여 편집 가능한 워드 문서(.docx)로 변환합니다.</div>", unsafe_allow_html=True)
 st.markdown("<div class='brand-author'>(Made by Manju)</div>", unsafe_allow_html=True)
 
-if "GEMINI_API_KEY" in st.secrets
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    st.error("❌ Streamlit Cloud 설정의 Secrets에 GEMINI_API_KEY가 등록되지 않았습니다.")
+    st.stop()
+
+uploaded_files = st.file_uploader(
+    "변환할 영어 지문 사진을 업로드하세요 (복수 선택 가능)", 
+    type=["jpg", "jpeg", "png"], 
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+    st.write("")
+    st.markdown(f"📂 **{len(uploaded_files)}개의 파일이 선택되었습니다.**")
+    
+    if st.button("Word 파일로 변환하기 ✨", type="primary"):
+        client = genai.Client(api_key=api_key)
+        
+        status_text = st.empty()
+        progress_bar = st.progress(0)
+        
+        all_word_data = process_images_safely(client, uploaded_files, api_key, progress_bar, status_text)
+        
+        if all_word_data:
+            st.toast("단어 데이터 정제가 완료되었습니다!")
+            st.write("---")
+            st.write("### 🔍 데이터 통합 미리보기")
+            st.dataframe(all_word_data, use_container_width=True)
+            
+            word_file_buffer = create_word_document(all_word_data)
+            
+            st.write("")
+            st.download_button(
+                label="📥 정제된 수업용 Word 문서 다운로드 (.docx)",
+                data=word_file_buffer,
+                file_name="🔮_통합_영어단어장.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True
+            )
