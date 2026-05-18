@@ -93,9 +93,6 @@ def create_word_document(all_word_data):
     buffer.seek(0)
     return buffer
 
-# ==========================================
-# 2. 서버 에러 발생 시 자동 재시도하는 분석 함수
-# ==========================================
 def process_images_safely(client, uploaded_files, api_key, progress_bar, status_text):
     all_data = []
     total_files = len(uploaded_files)
@@ -163,117 +160,123 @@ def process_images_safely(client, uploaded_files, api_key, progress_bar, status_
 # ==========================================
 # 3. Streamlit 메인 UI 대시보드
 # ==========================================
-st.set_page_config(page_title="Voca-converter", layout="centered", page_icon="📝")
+st.set_page_config(page_title="Voca-converter", layout="wide", page_icon="📝")
 
-# 🎨 30대 학원 원장이 선호하는 감성 & 스마트 테마 고급 CSS 스타일링 주입
+# 🔥 [치트키] 캐시를 무시하고 웹 화면 전체를 강제로 지배하는 초고도 CSS 주입
 st.markdown("""
     <style>
-    /* 전체 배경 및 폰트 무드 조절 */
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
     
-    html, body, [data-testid="stAppViewContainer"] {
-        background-color: #FAFAFA;
-        font-family: 'Noto Sans KR', sans-serif;
+    /* 1. 텅 빈 좌우 여백을 채우기 위해 기본 앱 래퍼 크기 강제 확장 */
+    [data-testid="stAppViewContainer"] {
+        background-color: #ECEFF1 !important; /* 부드러운 오피스 모노톤 그레이 */
+        font-family: 'Noto Sans KR', 'Inter', sans-serif !important;
     }
     
-    /* 카드 및 메인 컨테이너 디자인 정돈 */
+    /* 2. 상단 지저분한 여백과 기본 흰색 바 강제 삭제 및 중앙 카드화 */
     [data-testid="stMainBlockContainer"] {
-        background-color: #FFFFFF;
-        padding: 40px 50px !important;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        margin-top: 30px;
+        background-color: #FFFFFF !important;
+        max-width: 850px !important;
+        margin: 60px auto !important;
+        padding: 60px 60px !important;
+        border-radius: 24px !important;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05) !important;
     }
     
-    /* 세련된 딥 네이비 / 차분한 골드 무드의 타이틀 디자인 */
+    /* 3. 상단 헤더 박스 라인 처리 (학원 교재 연구실 무드) */
+    .header-box {
+        text-align: center !important;
+        border-bottom: 2px solid #F1F5F9 !important;
+        padding-bottom: 30px !important;
+        margin-bottom: 40px !important;
+    }
     .main-title {
-        font-size: 32px;
-        font-weight: 700;
-        color: #1E293B; /* 차분한 딥 실버블랙 */
-        margin-bottom: 2px;
-        letter-spacing: -0.5px;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 40px !important;
+        font-weight: 600 !important;
+        color: #0F172A !important;
+        letter-spacing: -1.5px !important;
     }
     .sub-title {
-        font-size: 13px;
-        color: #94A3B8; /* 소프트 그레이 */
-        font-weight: 500;
-        margin-bottom: 35px;
-        letter-spacing: 0.5px;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 11px !important;
+        color: #94A3B8 !important;
+        font-weight: 600 !important;
+        letter-spacing: 3px !important;
+        margin-top: 8px !important;
     }
+    
+    /* 4. 세련된 라운드 설명 블록 */
     .description-text {
-        font-size: 15px;
-        color: #64748B;
-        line-height: 1.6;
-        margin-bottom: 30px;
-        background-color: #F8FAFC;
-        padding: 15px 20px;
-        border-left: 4px solid #475569;
-        border-radius: 4px;
-    }
-    
-    /* 파일 업로더 영역 감성 커스텀 */
-    [data-testid="stFileUploader"] {
-        border: 1px dashed #CBD5E1 !important;
+        font-size: 14.5px !important;
+        color: #475569 !important;
+        line-height: 1.7 !important;
+        margin-bottom: 40px !important;
         background-color: #F8FAFC !important;
-        border-radius: 12px !important;
-        padding: 10px !important;
+        padding: 22px 30px !important;
+        border-radius: 14px !important;
+        border: 1px solid #E2E8F0 !important;
+        text-align: center !important;
     }
     
-    /* 단정하고 고급스러운 버튼 디자인 스타일링 */
+    /* 5. 투박한 업로드 점선 상자를 완전히 심플하고 감성적인 영역으로 재구축 */
+    [data-testid="stFileUploader"] {
+        border: 2px dashed #CBD5E1 !important;
+        background-color: #FAFAFA !important;
+        border-radius: 16px !important;
+        padding: 30px 20px !important;
+    }
+    
+    /* 6. 투박한 기본 버튼 스타일을 지우고 30대 원장 취향의 매트 블랙으로 고도화 */
     .stButton>button {
-        background-color: #334155 !important; /* 미드나잇 네이비 */
+        background-color: #1E293B !important;
         color: white !important;
-        border-radius: 8px !important;
-        padding: 12px 24px !important;
-        font-size: 15px !important;
+        border-radius: 10px !important;
+        padding: 15px 20px !important;
+        font-size: 16px !important;
         font-weight: 500 !important;
         border: none !important;
-        box-shadow: 0 2px 8px rgba(51, 65, 85, 0.15) !important;
-        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 12px rgba(30, 41, 59, 0.15) !important;
         width: 100% !important;
-        margin-top: 15px;
+        margin-top: 25px !important;
     }
     .stButton>button:hover {
-        background-color: #1E293B !important;
-        box-shadow: 0 4px 12px rgba(30, 41, 59, 0.25) !important;
-        transform: translateY(-1px);
+        background-color: #0F172A !important;
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.2) !important;
     }
     
-    /* 다운로드 버튼 (초록색 톤으로 은은하게 매칭) */
+    /* 7. 청록색 감성의 다운로드 버튼 */
     [data-testid="stDownloadButton"]>button {
-        background-color: #0F766E !important; /* 차분한 청록색 */
+        background-color: #0D9488 !important;
         color: white !important;
-        border-radius: 8px !important;
-        padding: 12px 24px !important;
-        font-size: 15px !important;
+        border-radius: 10px !important;
+        padding: 15px 20px !important;
+        font-size: 16px !important;
         font-weight: 500 !important;
         border: none !important;
-        box-shadow: 0 2px 8px rgba(15, 118, 110, 0.15) !important;
-        width: 100% !important;
-    }
-    [data-testid="stDownloadButton"]>button:hover {
-        background-color: #115E59 !important;
-        box-shadow: 0 4px 12px rgba(17, 94, 89, 0.25) !important;
     }
     
-    /* 진행 상태 컴포넌트 커스텀 */
+    /* 진행률 바 */
     .status-msg {
-        font-size: 14px;
-        color: #475569;
-        margin-bottom: 8px;
-        margin-top: 15px;
+        font-size: 14px !important;
+        color: #475569 !important;
+        margin-top: 25px !important;
     }
     .stProgress > div > div > div > div {
-        background-color: #475569 !important; /* 고급스러운 무채색 바 */
+        background-color: #475569 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 🏷️ 적용된 감성 타이틀 섹션
-st.markdown("<div class='main-title'>📝 Voca-converter</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>DESIGNED BY MANJU</div>", unsafe_allow_html=True)
+# 🏷️ 상단 감성 헤더 디자인 컴포넌트
+st.markdown("""
+    <div class='header-box'>
+        <div class='main-title'>Voca-converter</div>
+        <div class='sub-title'>MADE BY MANJU</div>
+    </div>
+""", unsafe_allow_html=True)
 
-st.markdown("<div class='description-text'>교재나 유인물 사진을 업로드하시면, 학원 수업에 즉시 활용할 수 있는 단정하고 정돈된 <strong>표 형태의 워드 문서(.docx)</strong>로 통합 변환해 드립니다.</div>", unsafe_allow_html=True)
+st.markdown("<div class='description-text'>교재나 유인물 사진을 업로드하시면, 수업에 즉시 활용할 수 있는 단정하고 정돈된 <strong>표 형태의 워드 문서(.docx)</strong>로 통합 변환해 드립니다.</div>", unsafe_allow_html=True)
 
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
@@ -288,7 +291,7 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    st.markdown(f"<div style='font-size:14px; color:#64748B; margin-bottom:15px;'>📂 <strong>선택된 아카이브:</strong> 총 {len(uploaded_files)}개의 문서 파일</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:13.5px; color:#64748B; margin-bottom:15px; text-align:center;'>📂 <strong>선택된 아카이브:</strong> 총 {len(uploaded_files)}개의 문서 파일이 대기 중입니다.</div>", unsafe_allow_html=True)
     
     if st.button("✨ 업로드된 문서 분석 및 Word 파일 생성"):
         client = genai.Client(api_key=api_key)
